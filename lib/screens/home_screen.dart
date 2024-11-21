@@ -21,8 +21,33 @@ class _HomeScreenState extends State<HomeScreen> {
     'videoMemory': 0.05,
   };
 
-  final TextEditingController _optionController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final Map<String, TextEditingController> _criteriaControllers = {
+    'ram': TextEditingController(),
+    'processor': TextEditingController(),
+    'screenSize': TextEditingController(),
+    'price': TextEditingController(),
+    'weight': TextEditingController(),
+    'storage': TextEditingController(),
+    'battery': TextEditingController(),
+    'videoMemory': TextEditingController(),
+  };
+
   String? _bestOption;
+
+  void _addOption() {
+    if (_nameController.text.isNotEmpty) {
+      Map<String, dynamic> newOption = {'name': _nameController.text};
+      _criteriaControllers.forEach((key, controller) {
+        newOption[key] = double.tryParse(controller.text) ?? 0.0;
+      });
+      setState(() {
+        _options.add(newOption);
+      });
+      _nameController.clear();
+      _criteriaControllers.forEach((key, controller) => controller.clear());
+    }
+  }
 
   void _calculateBestOption() {
     final ahpGaussian = AhpGaussian(_options, _criteriaWeights);
@@ -32,23 +57,22 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _addOption() {
-    if (_optionController.text.isNotEmpty) {
-      setState(() {
-        _options.add({
-          "name": _optionController.text,
-          "ram": 8, // exemplo
-          "processor": 2.8,
-          "screenSize": 6.1,
-          "price": 1200,
-          "weight": 200,
-          "storage": 128,
-          "battery": 4500,
-          "videoMemory": 6,
-        });
-      });
-      _optionController.clear();
-    }
+  Widget _buildCriteriaInputs() {
+    return Column(
+      children: _criteriaControllers.entries.map((entry) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: TextField(
+            controller: entry.value,
+            decoration: InputDecoration(
+              labelText: entry.key,
+              border: const OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.number,
+          ),
+        );
+      }).toList(),
+    );
   }
 
   @override
@@ -59,45 +83,55 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _optionController,
-              decoration: const InputDecoration(
-                labelText: 'Cellphone Name',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: _addOption,
-              child: const Text('Add Option'),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _options.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(_options[index]['name']),
-                  );
-                },
-              ),
-            ),
-            ElevatedButton(
-              onPressed: _calculateBestOption,
-              child: const Text('Calculate Best Option'),
-            ),
-            if (_bestOption != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                'Best Option: $_bestOption',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Cellphone Name',
+                  border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 16),
+              const Text(
+                'Enter Criteria Values:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              _buildCriteriaInputs(),
+              ElevatedButton(
+                onPressed: _addOption,
+                child: const Text('Add Option'),
+              ),
+              const Divider(),
+              const Text(
+                'Options Added:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              ..._options.map((option) => ListTile(
+                    title: Text(option['name']),
+                    subtitle: Text(option.entries
+                        .where((e) => e.key != 'name')
+                        .map((e) => '${e.key}: ${e.value}')
+                        .join(', ')),
+                  )),
+              const Divider(),
+              ElevatedButton(
+                onPressed: _calculateBestOption,
+                child: const Text('Calculate Best Option'),
+              ),
+              if (_bestOption != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Best Option: $_bestOption',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
